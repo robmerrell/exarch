@@ -163,13 +163,18 @@ func performSearch(node *sitter.Node, contents []byte, input *SearchInput) ([]Ma
 	var matches []Match
 
 	var tsQuery string
+	var processFunc func(capture sitter.QueryCapture, contents []byte) *Match
+
 	switch input.SearchType {
 	case SearchTypeAlias:
 		tsQuery = fmt.Sprintf(aliasSearchQuery, input.SearchTerms)
+		processFunc = processStrCapture
 	case SearchTypeAtom:
 		tsQuery = fmt.Sprintf(atomSearchQuery, input.SearchTerms)
+		processFunc = processStrCapture
 	case SearchTypeStr:
 		tsQuery = fmt.Sprintf(strSearchQuery, input.SearchTerms)
+		processFunc = processStrCapture
 	default:
 		return matches, fmt.Errorf("Invalid search type: %d", input.SearchType)
 	}
@@ -191,12 +196,38 @@ func performSearch(node *sitter.Node, contents []byte, input *SearchInput) ([]Ma
 
 		match = cursor.FilterPredicates(match, contents)
 		for _, capture := range match.Captures {
-			matches = append(matches, Match{
-				Row:      capture.Node.StartPoint().Row + 1,
-				Contents: capture.Node.Content(contents),
-			})
+			// run the process function on the capture and ignore any that return nil
+			if processedMatch := processFunc(capture, contents); processedMatch != nil {
+				matches = append(matches, *processedMatch)
+			}
 		}
 	}
 
 	return matches, nil
+}
+
+// process the captures for string searches and filter out module and doc comments.
+func processStrCapture(capture sitter.QueryCapture, contents []byte) *Match {
+	// follow the node up 2 parents. If the grandparent node is a doc or moduledoc
+	// identifier then don't return a match.
+	isDoc := false
+
+	if parent := capture.Node.Parent(); parent != nil {
+		if grandparent := parent.Parent(); grandparent != nil {
+			target := grandparent.ChildByFieldName("target")
+			if target != nil && (target.Content(contents) == "doc" || target.Content(contents) == "moduledoc") {
+				isDoc = true
+			}
+		}
+	}
+
+	if isDoc {
+		return nil
+	} else {
+		return &Match{
+			Row:      capture.Node.StartPoint().Row + 1,
+			Contents: capture.Node.Content(contents),
+		}
+	}
+
 }

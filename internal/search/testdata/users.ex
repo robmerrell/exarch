@@ -22,7 +22,7 @@ defmodule TestApp.Accounts.Users do
   end
 
   @doc """
-  Returns a hello message for the user
+  Returns a hello message for the user as a string
   """
   defp hello_message(user) do
     color =
