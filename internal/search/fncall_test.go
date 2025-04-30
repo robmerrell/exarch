@@ -56,3 +56,21 @@ func TestParseRemoteCalls(t *testing.T) {
 		t.Errorf("got %v want %v", fns, expected)
 	}
 }
+
+func TestParseAliases(t *testing.T) {
+	root, contents := readTestFile(t)
+	aliases, err := parseAliases(root, contents)
+	if err != nil {
+		t.Errorf("parse aliases failed: %v", err)
+	}
+
+	expected := []string{
+		"TestApp.Repo",
+		"TestApp.Accounts.User",
+		"TestApp.Accounts.Admin",
+	}
+
+	if !reflect.DeepEqual(aliases, expected) {
+		t.Errorf("got %v want %v", aliases, expected)
+	}
+}

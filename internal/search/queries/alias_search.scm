@@ -1,2 +1,3 @@
-((alias) @alias
- (#match? @alias "%s"))
+(call target: (identifier) @keyword
+  (arguments) @arguments
+  (#eq? @keyword "alias"))
