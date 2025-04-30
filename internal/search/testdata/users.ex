@@ -17,6 +17,7 @@ defmodule TestApp.Accounts.Users do
 
   def update_user(user, attrs) do
     user
+    |> TestApp.FilterChain.process()
     |> User.changeset(attrs)
     |> Repo.update()
   end
@@ -27,7 +28,7 @@ defmodule TestApp.Accounts.Users do
   defp hello_message(user) do
     color =
       case user.favorite_fruit do
-        :blueberry -> "blue"
+        :blueberry -> blue_str
         :strawberry -> "red"
         :lime -> "green"
       end
@@ -42,4 +43,6 @@ defmodule TestApp.Accounts.Users do
       "string three"
     ]
   end
+
+  def blue_str, do: "blue"
 end
