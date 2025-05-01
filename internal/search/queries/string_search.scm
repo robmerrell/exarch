@@ -1,2 +1,1 @@
-((string) @str
- (#match? @str "%s"))
+((string) @str)

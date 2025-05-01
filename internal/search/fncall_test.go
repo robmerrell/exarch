@@ -11,7 +11,7 @@ import (
 )
 
 func readTestFile(t *testing.T) (*sitter.Node, []byte) {
-	lang = elixir.GetLanguage()
+	lang := elixir.GetLanguage()
 
 	// setup the parser
 	parser := sitter.NewParser()

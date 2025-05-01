@@ -103,6 +103,9 @@ func searchFile(file string, input *SearchInput) ([]string, error) {
 
 	switch input.SearchType {
 	case SearchTypeStr:
+		searchResults, searchErr = searchStr(root, contents, input)
+	case SearchTypeDoc:
+		searchResults, searchErr = searchDoc(root, contents, input)
 	case SearchTypeFnCall:
 		searchResults, searchErr = searchFnCalls(root, contents, input)
 	default:
