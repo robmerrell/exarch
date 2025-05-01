@@ -13,23 +13,23 @@ Docs and Strings search with partial matches.
 ## Usage
 
 ```
-NAME:                                                                                                              
-   exarch - Semantic Elixir Search                                                                                 
-                                                                                                                   
-USAGE:                                                                                                             
-   exarch [global options] SEARCH_MODE SEARCH                                                                      
-                                                                                                                   
-DESCRIPTION:                                                                                                       
-   Searches recursively from the current directory.                                                                
-                                                                                                                   
-   SEARCH_MODE can be one of:                                                                                      
-   1. fncall - Search for function calls. This searches partial matches,                                           
-               and is able to handle aliases if given a fully qualified                                            
-               function. Eg. TestApp.Users.process can search for                                                  
-               Users.process if TestApp.Users has been aliased.                                                    
-   2. str - Search inside of strings.                                                                              
-   3. doc - search inside of documentation.                                                                        
-                                                                                                                   
-GLOBAL OPTIONS:                                                                                                    
+NAME:
+   exarch - Semantic Elixir Search
+
+USAGE:
+   exarch [global options] SEARCH_MODE SEARCH
+
+DESCRIPTION:
+   Searches recursively from the current directory.
+
+   SEARCH_MODE can be one of:
+   1. fncall - Search for function calls. This searches partial matches,
+               and is able to handle aliases if given a fully qualified
+               function. Eg. TestApp.Users.process can search for
+               Users.process if TestApp.Users has been aliased.
+   2. str - Search inside of strings.
+   3. doc - search inside of documentation.
+
+GLOBAL OPTIONS:
    --help, -h  show help
 ```
