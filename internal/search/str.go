@@ -45,7 +45,7 @@ func searchStr(root *sitter.Node, contents []byte, input *SearchInput) ([]Result
 				if !isDoc(capture.Node, contents) && strings.Contains(line, input.SearchTerms) {
 					matches = append(matches, Str{
 						Contents: line,
-						Line:     capture.Node.StartPoint().Row + 1 + uint32(i),
+						Line:     capture.Node.StartPoint().Row + uint32(i),
 					})
 				}
 			}
@@ -79,7 +79,7 @@ func searchDoc(root *sitter.Node, contents []byte, input *SearchInput) ([]Result
 				if isDoc(capture.Node, contents) && strings.Contains(line, input.SearchTerms) {
 					matches = append(matches, Str{
 						Contents: line,
-						Line:     capture.Node.StartPoint().Row + 1 + uint32(i),
+						Line:     capture.Node.StartPoint().Row + uint32(i),
 					})
 				}
 			}

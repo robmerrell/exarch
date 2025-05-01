@@ -31,6 +31,9 @@ type Alias struct {
 //go:embed queries/alias_search.scm
 var aliasQuery string
 
+//go:embed queries/alias_as_search.scm
+var aliasAsQuery string
+
 //go:embed queries/remote_fn_call.scm
 var remoteFnCallQuery string
 
@@ -60,7 +63,12 @@ func parseAliases(root *sitter.Node, contents []byte) ([]Alias, error) {
 					switch child.Type() {
 					// single alias
 					case "alias":
-						aliases = append(aliases, singleAlias(capture.Node, contents))
+						singleAlias, err := singleAlias(capture.Node, contents)
+						if err != nil {
+							return nil, err
+						}
+
+						aliases = append(aliases, singleAlias)
 					// multiple aliases
 					case "dot":
 						aliases = append(aliases, multipleAliases(child, contents)...)
@@ -73,17 +81,46 @@ func parseAliases(root *sitter.Node, contents []byte) ([]Alias, error) {
 	return aliases, nil
 }
 
-func singleAlias(node *sitter.Node, contents []byte) Alias {
-	// TODO: has an 'as' key
-	modulePath := node.Content(contents)
-	aliasAs := modulePath[strings.LastIndex(modulePath, ".")+1:]
+// look for as: to use as the alias. Otherwise just use the last segment of the module path
+func parseAliasAs(node *sitter.Node, contents []byte, modulePath string) (string, error) {
+	query, err := sitter.NewQuery([]byte(aliasAsQuery), elixir.GetLanguage())
+	if err != nil {
+		return "", err
+	}
+
+	cursor := sitter.NewQueryCursor()
+	cursor.Exec(query, node)
+
+	for {
+		// get the match and break out if we're done matching
+		match, ok := cursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range match.Captures {
+			if capture.Node.Type() == "alias" {
+				return capture.Node.Content(contents), nil
+			}
+		}
+	}
+
+	return modulePath[strings.LastIndex(modulePath, ".")+1:], nil
+}
+
+func singleAlias(node *sitter.Node, contents []byte) (Alias, error) {
+	modulePath := node.Child(0).Content(contents)
+	aliasAs, err := parseAliasAs(node, contents, modulePath)
+	if err != nil {
+		return Alias{}, err
+	}
 
 	return Alias{
 		ModulePath: modulePath,
 		As:         aliasAs,
 		Contents:   node.Parent().Content(contents),
 		Line:       node.StartPoint().Row + 1,
-	}
+	}, nil
 }
 
 func multipleAliases(node *sitter.Node, contents []byte) []Alias {
@@ -134,7 +171,7 @@ func parseRemoteCalls(root *sitter.Node, contents []byte, aliases []Alias) ([]Fn
 					ModulePath: modulePath,
 					Name:       fnName,
 					Contents:   capture.Node.Content(contents),
-					Line:       capture.Node.StartPoint().Row + 1,
+					Line:       capture.Node.StartPoint().Row,
 				})
 			}
 		}

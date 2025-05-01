@@ -43,10 +43,11 @@ func TestParseAliases(t *testing.T) {
 		{ModulePath: "TestApp.Repo", As: "Repo", Contents: "alias TestApp.Repo", Line: 6},
 		{ModulePath: "TestApp.Accounts.User", As: "User", Contents: "alias TestApp.Accounts.{User, Admin}", Line: 7},
 		{ModulePath: "TestApp.Accounts.Admin", As: "Admin", Contents: "alias TestApp.Accounts.{User, Admin}", Line: 7},
+		{ModulePath: "TestApp.Result", As: "Res", Contents: "alias TestApp.Result, as: Res", Line: 8},
 	}
 
 	if !reflect.DeepEqual(aliases, expected) {
-		t.Errorf("got %v want %v", aliases, expected)
+		t.Errorf("got %+v want %+v", aliases, expected)
 	}
 }
 
@@ -115,7 +116,7 @@ func TestSearchFnCallsFullyQualifiedName(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(fnCalls, expected) {
-		t.Errorf("got %v want %v", fnCalls, expected)
+		t.Errorf("got %+v want %+v", fnCalls, expected)
 	}
 }
 

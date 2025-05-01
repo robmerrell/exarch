@@ -5,6 +5,7 @@ defmodule TestApp.Accounts.Users do
 
   alias TestApp.Repo
   alias TestApp.Accounts.{User, Admin}
+  alias TestApp.Result, as: Res
 
   @doc """
   Get a user by id
