@@ -12,10 +12,6 @@ import (
 	"github.com/smacker/go-tree-sitter/elixir"
 )
 
-// This is a single purpose searcher with no plans for supporting other languages, so
-// just define elixir at the package level.
-var lang = elixir.GetLanguage()
-
 // alias filename to string to make the search return type clearer.
 type filename string
 
@@ -24,9 +20,9 @@ type filename string
 type SearchType int
 
 const (
-	SearchTypeAlias SearchType = iota
-	SearchTypeStr
-	SearchTypeAtom
+	SearchTypeStr SearchType = iota
+	SearchTypeDoc
+	SearchTypeFnCall
 )
 
 // SearchInput holds all of the input necessary to perform a search. The only
@@ -34,8 +30,7 @@ const (
 type SearchInput struct {
 	SearchTerms string
 	SearchType  SearchType
-
-	Function *string // Search within specific matching functions
+	Dir         string
 }
 
 // Match represents a match found in the elixir source code.
@@ -44,28 +39,14 @@ type Match struct {
 	Contents string // The contents of the matched node
 }
 
-// working
-const funcDefQuery = `(
-(call target: (identifier) @keyword
-  (arguments
-    [(call target: (identifier))
-     (identifier)] @func_name)) @identifier
-(#match? @keyword "^(def|defp)$")
-(#match? @func_name "follow")
-)`
+type ResultsFormatter interface {
+	Format() string
+}
 
-//go:embed queries/alias_search.scm
-var aliasSearchQuery string
-
-//go:embed queries/string_search.scm
-var strSearchQuery string
-
-//go:embed queries/atom_search.scm
-var atomSearchQuery string
-
-func Search() error {
+// Search performs a search and prints results to stdout
+func Search(input *SearchInput) error {
 	// get all files to search
-	filepath.WalkDir("/home/rob/projects/gh/elixir-phoenix-realworld-example-app", func(_path string, entry fs.DirEntry, walkErr error) error {
+	return filepath.WalkDir(input.Dir, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -74,28 +55,33 @@ func Search() error {
 		if entry.Type().IsRegular() {
 			ext := filepath.Ext(entry.Name())
 			if ext == ".ex" || ext == ".exs" {
-				// read the files and check if they match any searches
+				res, err := searchFile(path, input)
+				if err != nil {
+					return err
+				}
 
-				// put the matches in our list
+				relFile, err := filepath.Rel(input.Dir, path)
+				if err != nil {
+					return err
+				}
 
-				// if in-mod is given see if the file has a matching module
-				// if in-fn is given see if the file has a matching function
-				// fmt.Println(entry.Name())
+				if len(res) > 0 {
+					fmt.Println(relFile)
+					for _, match := range res {
+						fmt.Println(match)
+					}
+					fmt.Println("")
+				}
 			}
-
 		}
 
 		return nil
 	})
-
-	// go through each file and apply the filters first. If they are empty move on
-
-	// find the nodes
-	return nil
 }
 
-// searches in a specific file
-func searchFile(file string, input *SearchInput) ([]Match, error) {
+func searchFile(file string, input *SearchInput) ([]string, error) {
+	lang := elixir.GetLanguage()
+
 	// setup the parser
 	parser := sitter.NewParser()
 	parser.SetLanguage(lang)
@@ -112,122 +98,25 @@ func searchFile(file string, input *SearchInput) ([]Match, error) {
 		return nil, err
 	}
 
-	// if searches are constrained by a function we perform the search on each node
-	// of the found function. Otherwise perform the search from the root node.
-	if input.Function == nil {
-		return performSearch(root, contents, input)
-	} else {
-		// get all of the function nodes and perform a search on each
+	var searchResults []ResultsFormatter
+	var searchErr error
 
+	switch input.SearchType {
+	case SearchTypeStr:
+	case SearchTypeFnCall:
+		searchResults, searchErr = searchFnCalls(root, contents, input)
+	default:
+		return nil, fmt.Errorf("Invalid search type: %d", input.SearchType)
+	}
+
+	if searchErr != nil {
 		return nil, err
 	}
 
-	// query for specific functions
-	// if input.Function != nil {
-	// 	query, err := sitter.NewQuery([]byte(funcDefQuery), elixir.GetLanguage())
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	cursor := sitter.NewQueryCursor()
-	// 	cursor.Exec(query, root)
-
-	// 	// results
-	// 	for {
-	// 		// get the match and break out if we're done matching
-	// 		match, ok := cursor.NextMatch()
-	// 		if !ok {
-	// 			break
-	// 		}
-
-	// 		match = cursor.FilterPredicates(match, contents)
-	// 		for _, capture := range match.Captures {
-	// 			if capture.Node.Type() == "call" {
-
-	// 				// look at the first child to tell if we're at the top level def/defn
-	// 				if first := capture.Node.Child(0); first != nil {
-	// 					if first.Content(contents) == "def" || first.Content(contents) == "defp" {
-	// 						fmt.Println(capture.Node.String())
-	// 						fmt.Println(capture.Node.Content(contents))
-	// 						fmt.Println("=====")
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// }
-}
-
-func performSearch(node *sitter.Node, contents []byte, input *SearchInput) ([]Match, error) {
-	var matches []Match
-
-	var tsQuery string
-	var processFunc func(capture sitter.QueryCapture, contents []byte) *Match
-
-	switch input.SearchType {
-	case SearchTypeAlias:
-		tsQuery = fmt.Sprintf(aliasSearchQuery, input.SearchTerms)
-		processFunc = processStrCapture
-	case SearchTypeAtom:
-		tsQuery = fmt.Sprintf(atomSearchQuery, input.SearchTerms)
-		processFunc = processStrCapture
-	case SearchTypeStr:
-		tsQuery = fmt.Sprintf(strSearchQuery, input.SearchTerms)
-		processFunc = processStrCapture
-	default:
-		return matches, fmt.Errorf("Invalid search type: %d", input.SearchType)
+	output := []string{}
+	for _, match := range searchResults {
+		output = append(output, match.Format())
 	}
 
-	query, err := sitter.NewQuery([]byte(tsQuery), lang)
-	if err != nil {
-		return matches, err
-	}
-
-	cursor := sitter.NewQueryCursor()
-	cursor.Exec(query, node)
-
-	for {
-		// get the match and break out if we're done matching
-		match, ok := cursor.NextMatch()
-		if !ok {
-			break
-		}
-
-		match = cursor.FilterPredicates(match, contents)
-		for _, capture := range match.Captures {
-			// run the process function on the capture and ignore any that return nil
-			if processedMatch := processFunc(capture, contents); processedMatch != nil {
-				matches = append(matches, *processedMatch)
-			}
-		}
-	}
-
-	return matches, nil
-}
-
-// process the captures for string searches and filter out module and doc comments.
-func processStrCapture(capture sitter.QueryCapture, contents []byte) *Match {
-	// follow the node up 2 parents. If the grandparent node is a doc or moduledoc
-	// identifier then don't return a match.
-	isDoc := false
-
-	if parent := capture.Node.Parent(); parent != nil {
-		if grandparent := parent.Parent(); grandparent != nil {
-			target := grandparent.ChildByFieldName("target")
-			if target != nil && (target.Content(contents) == "doc" || target.Content(contents) == "moduledoc") {
-				isDoc = true
-			}
-		}
-	}
-
-	if isDoc {
-		return nil
-	} else {
-		return &Match{
-			Row:      capture.Node.StartPoint().Row + 1,
-			Contents: capture.Node.Content(contents),
-		}
-	}
-
+	return output, nil
 }

@@ -1,41 +1,89 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
 	"github.com/robmerrell/exarch/internal/search"
+	"github.com/urfave/cli/v3"
 )
 
-// ../../../queries/func_def.scm
-// var funcDefQuery string
+const desc = `Searches recursively from the current directory.
 
-const funcDefQuery = `(
-(call target: (identifier) @keyword
-  (arguments
-    [(call target: (identifier))
-     (identifier)] @func_name)) @identifier
-(#match? @keyword "^(def|defp)$")
-(#match? @func_name "follow")
-)`
+SEARCH_MODE can be one of:
+1. fncall - Search for function calls. This searches partial matches,
+            and is able to handle aliases if given a fully qualified
+            function. Eg. TestApp.Users.process can search for
+            Users.process if TestApp.Users has been aliased.
+2. str - Search inside of strings.
+3. doc - search inside of documentation.`
 
 func main() {
-	file := "/home/rob/projects/gh/elixir-phoenix-realworld-example-app/lib/real_world/accounts/users.ex"
-	// funcinput := "follow"
-	input := &search.SearchInput{
-		SearchType:  search.SearchTypeStr,
-		SearchTerms: "",
-		// Function:    &funcinput,
+	var searchMode string
+	var searchTerms string
+
+	cmd := &cli.Command{
+		Name:        "exarch",
+		Usage:       "Semantic Elixir Search",
+		ArgsUsage:   "SEARCH_MODE SEARCH",
+		Description: desc,
+		Arguments: []cli.Argument{
+			&cli.StringArg{
+				Name:        "search_mode",
+				Destination: &searchMode,
+			},
+			&cli.StringArg{
+				Name:        "search_terms",
+				Destination: &searchTerms,
+			},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			// make sure the search mode is valid
+			var searchType search.SearchType
+			switch searchMode {
+			case "fncall":
+				searchType = search.SearchTypeFnCall
+			case "str":
+				searchType = search.SearchTypeStr
+			case "doc":
+				searchType = search.SearchTypeDoc
+			default:
+				return cli.Exit("Invalid SEARCH_MODE, use --help for instructions", 1)
+			}
+
+			if searchTerms == "" {
+				return cli.Exit("Can't use empty search terms, use --help for instructions", 1)
+			}
+
+			input, err := buildInput(searchType, searchTerms)
+			if err != nil {
+				return cli.Exit(fmt.Sprintf("Input Error: %v", err), 1)
+			}
+
+			search.Search(input)
+			return nil
+		},
 	}
 
-	search.SearchFile(file, input)
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
-// func buildQuery(input *search.SearchInput) error {
-// 	// if we are searching in functions then use the func def query
+func buildInput(searchType search.SearchType, searchTerms string) (*search.SearchInput, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
 
-// 	// parse the template
-// 	tpl, err := template.New("func_def").Parse(funcDefQuery)
-// 	if err != nil {
-// 		return err
-// 	}
+	input := &search.SearchInput{
+		SearchType:  searchType,
+		SearchTerms: searchTerms,
+		Dir:         dir,
+	}
 
-// 	return nil
-// }
+	return input, nil
+}
