@@ -1,6 +1,7 @@
 package search
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -16,20 +17,14 @@ func TestSearchStr(t *testing.T) {
 		t.Errorf("search string failed: %v", err)
 	}
 
-	expected := []Str{
-		{Contents: "\"string one\"", Line: 41},
-		{Contents: "\"string two\"", Line: 42},
-		{Contents: "\"string three\"", Line: 43},
+	expected := []ResultsFormatter{
+		Str{Contents: "\"string one\"", Line: 41},
+		Str{Contents: "\"string two\"", Line: 42},
+		Str{Contents: "\"string three\"", Line: 43},
 	}
 
-	if len(matches) != 3 {
-		t.Errorf("too many matches")
-	}
-
-	for i := range matches {
-		if matches[i] != expected[i] {
-			t.Errorf("got %v want %v", matches[i], expected[i])
-		}
+	if !reflect.DeepEqual(matches, expected) {
+		t.Errorf("got %v want %v", matches, expected)
 	}
 }
 
@@ -45,18 +40,12 @@ func TestSearchDoc(t *testing.T) {
 		t.Errorf("search doc failed: %v", err)
 	}
 
-	expected := []Str{
-		{Contents: "  Get a user by id", Line: 10},
-		{Contents: "  Returns a hello message for the user as a string", Line: 26},
+	expected := []ResultsFormatter{
+		Str{Contents: "  Get a user by id", Line: 10},
+		Str{Contents: "  Returns a hello message for the user as a string", Line: 26},
 	}
 
-	if len(matches) != 2 {
-		t.Errorf("too many matches")
-	}
-
-	for i := range matches {
-		if matches[i] != expected[i] {
-			t.Errorf("got %v want %v", matches[i], expected[i])
-		}
+	if !reflect.DeepEqual(matches, expected) {
+		t.Errorf("got %v want %v", matches, expected)
 	}
 }

@@ -110,8 +110,8 @@ func TestSearchFnCallsFullyQualifiedName(t *testing.T) {
 	}
 
 	fnCalls, _ := searchFnCalls(root, contents, input)
-	expected := []FnCall{
-		{ModulePath: "TestApp.Repo", Name: "update", Contents: "Repo.update()", Line: 22},
+	expected := []ResultsFormatter{
+		FnCall{ModulePath: "TestApp.Repo", Name: "update", Contents: "Repo.update()", Line: 22},
 	}
 
 	if !reflect.DeepEqual(fnCalls, expected) {
@@ -128,8 +128,8 @@ func TestSearchFnCallsPartialName(t *testing.T) {
 	}
 
 	fnCalls, _ := searchFnCalls(root, contents, input)
-	expected := []FnCall{
-		{ModulePath: "TestApp.FilterChain", Name: "process", Contents: "TestApp.FilterChain.process()", Line: 20},
+	expected := []ResultsFormatter{
+		FnCall{ModulePath: "TestApp.FilterChain", Name: "process", Contents: "TestApp.FilterChain.process()", Line: 20},
 	}
 
 	if !reflect.DeepEqual(fnCalls, expected) {
@@ -146,8 +146,8 @@ func TestSearchFnCallsNoModule(t *testing.T) {
 	}
 
 	fnCalls, _ := searchFnCalls(root, contents, input)
-	expected := []FnCall{
-		{ModulePath: "TestApp.FilterChain", Name: "process", Contents: "TestApp.FilterChain.process()", Line: 20},
+	expected := []ResultsFormatter{
+		FnCall{ModulePath: "TestApp.FilterChain", Name: "process", Contents: "TestApp.FilterChain.process()", Line: 20},
 	}
 
 	if !reflect.DeepEqual(fnCalls, expected) {
@@ -164,10 +164,10 @@ func TestSearchFnCallsOnlyModule(t *testing.T) {
 	}
 
 	fnCalls, _ := searchFnCalls(root, contents, input)
-	expected := []FnCall{
-		{ModulePath: "TestApp.Repo", Name: "get!", Contents: "Repo.get!(User, id)", Line: 12},
-		{ModulePath: "TestApp.Repo", Name: "get_by", Contents: "Repo.get_by(User, username: username)", Line: 15},
-		{ModulePath: "TestApp.Repo", Name: "update", Contents: "Repo.update()", Line: 22},
+	expected := []ResultsFormatter{
+		FnCall{ModulePath: "TestApp.Repo", Name: "get!", Contents: "Repo.get!(User, id)", Line: 12},
+		FnCall{ModulePath: "TestApp.Repo", Name: "get_by", Contents: "Repo.get_by(User, username: username)", Line: 15},
+		FnCall{ModulePath: "TestApp.Repo", Name: "update", Contents: "Repo.update()", Line: 22},
 	}
 
 	if !reflect.DeepEqual(fnCalls, expected) {
